@@ -11,9 +11,10 @@
 #' @export ue_get_users
 
 ue_get_users <- function(ue_id,ue_key = Sys.getenv('ue_key')) {
+  all_users_df <- tibble()
   all_users_list <- GET(glue('https://{ue_id}.user.com/api/public/users/'),
-                             add_headers(`Authorization` = glue('Token {ue_key}'))) %>% 
-                          content() %>% pluck('results') 
+                             add_headers(`Authorization` = glue('Token {ue_key}'))) %>%
+                          content() %>% pluck('results')
   for(i in 1:length(all_users_list)) {
     adf <- all_users_list[[i]] %>% compact() %>% bind_rows()
     if(!is.null(adf$lists)) {
