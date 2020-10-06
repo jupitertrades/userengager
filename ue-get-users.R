@@ -11,9 +11,17 @@
 #' @export ue_get_users
 
 ue_get_users <- function(ue_id,ue_key = Sys.getenv('ue_key')) {
-  all_users_list <- GET(glue('https://{ue_id}.user.com/api/public/users/'),
-                             add_headers(`Authorization` = glue('Token {ue_key}'))) %>%
-                          content() %>% pluck('results')
+  page_list <- 1
+  all_users_list <- list()
+  i <- 1
+  while(!is.null(page_list)) {
+    page_list <- GET(glue('https://{ue_id}.user.com/api/public/users?page={i}'),
+                          add_headers(`Authorization` = glue('Token {ue_key}'))) %>%
+      content() %>% pluck('results')
+    all_users_list <- c(all_users_list,page_list)
+    i <- i + 1
+  }
+
   null_replacer <- function(x) {
     if(is.null(x)) {
       return('0')
@@ -27,6 +35,8 @@ ue_get_users <- function(ue_id,ue_key = Sys.getenv('ue_key')) {
     tidyr::unnest(created_at)
   amail <- all_users_list %>% map2('email',pluck) %>% map(null_replacer) %>% enframe() %>% select(email = value) %>%
     tidyr::unnest(email)
+  unsub_status <- all_users_list %>% map2('unsubscribed',pluck) %>% map(null_replacer) %>% enframe() %>% select(unsubscribed = value) %>%
+    tidyr::unnest(unsubscribed)
   list_collector <- c()
   for(i in 1:length(all_users_list)) {
     adf <- all_users_list[[i]] %>% pluck('lists') %>% map2('id',pluck) %>% glue_collapse(sep=',')
@@ -37,7 +47,10 @@ ue_get_users <- function(ue_id,ue_key = Sys.getenv('ue_key')) {
       list_collector <-  c(list_collector,0)
     }
   }
-  all_users_df <- tibble(id = aid$id, created_at = created_at$created_at, email = amail$email, lists = list_collector)
+  all_users_df <- tibble(id = aid$id, created_at = created_at$created_at, email = amail$email,
+                         unsubscribed = unsub_status$unsubscribed,lists = list_collector) %>%
+    group_by(email) %>% arrange(created_at) %>%
+    slice(1) %>% ungroup()
   return(all_users_df)
 }
 
