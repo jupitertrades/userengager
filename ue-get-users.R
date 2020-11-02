@@ -17,7 +17,7 @@ ue_get_users <- function(ue_id,ue_key = Sys.getenv('ue_key')) {
   while(!is.null(page_list)) {
     page_list <- GET(glue('https://{ue_id}.user.com/api/public/users?page={i}'),
                           add_headers(`Authorization` = glue('Token {ue_key}'))) %>%
-      content() %>% pluck('results')
+      content() %>% purrr::pluck('results')
     all_users_list <- c(all_users_list,page_list)
     i <- i + 1
   }
@@ -30,16 +30,16 @@ ue_get_users <- function(ue_id,ue_key = Sys.getenv('ue_key')) {
      return(x)
     }
   }
-  aid <- all_users_list %>% map2('id',pluck) %>% enframe() %>% select(id = value) %>% tidyr::unnest(id)
-  created_at <- all_users_list %>% map2('created_at',pluck) %>% enframe() %>% select(created_at = value) %>%
+  aid <- all_users_list %>% map2('id',purrr::pluck) %>% enframe() %>% select(id = value) %>% tidyr::unnest(id)
+  created_at <- all_users_list %>% map2('created_at',purrr::pluck) %>% enframe() %>% select(created_at = value) %>%
     tidyr::unnest(created_at)
-  amail <- all_users_list %>% map2('email',pluck) %>% map(null_replacer) %>% enframe() %>% select(email = value) %>%
+  amail <- all_users_list %>% map2('email',purrr::pluck) %>% map(null_replacer) %>% enframe() %>% select(email = value) %>%
     tidyr::unnest(email)
-  unsub_status <- all_users_list %>% map2('unsubscribed',pluck) %>% map(null_replacer) %>% enframe() %>% select(unsubscribed = value) %>%
+  unsub_status <- all_users_list %>% map2('unsubscribed',purrr::pluck) %>% map(null_replacer) %>% enframe() %>% select(unsubscribed = value) %>%
     tidyr::unnest(unsubscribed)
   list_collector <- c()
   for(i in 1:length(all_users_list)) {
-    adf <- all_users_list[[i]] %>% pluck('lists') %>% map2('id',pluck) %>% glue_collapse(sep=',')
+    adf <- all_users_list[[i]] %>% purrr::pluck('lists') %>% map2('id',purrr::pluck) %>% glue_collapse(sep=',')
     if(length(adf) > 0) {
       list_collector <-  c(list_collector,adf)
     }
